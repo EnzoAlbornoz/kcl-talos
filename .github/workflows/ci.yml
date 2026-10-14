@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generator:
+    name: Generator unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - run: uv run python -m unittest discover -s tests -v
+
+  package:
+    name: Package (Talos ${{ matrix.talos }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest supported release, latest of an older minor, and the current release
+        # (the example uses document kinds introduced in Talos 1.14).
+        include:
+          - talos: v1.8.0
+          - talos: v1.12.12
+          - talos: v1.14.2
+            example: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          talos-version: ${{ matrix.talos }}
+      - name: Validate package
+        run: bash scripts/test-package.sh
+      - name: End-to-end with talosctl
+        run: bash scripts/e2e.sh
+      - name: Apply the example patches
+        if: matrix.example
+        working-directory: examples
+        run: |
+          out=$(mktemp -d)
+          talosctl gen config demo https://10.0.0.10:6443 --with-docs=false --with-examples=false -o "$out"
+          for node in cp-1:controlplane worker-1:worker; do
+            kcl run main.k -D node="${node%%:*}" >"$out/patch.yaml"
+            talosctl machineconfig patch "$out/${node##*:}.yaml" --patch "@$out/patch.yaml" -o /dev/null
+          done

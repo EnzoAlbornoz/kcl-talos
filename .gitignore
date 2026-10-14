@@ -1,0 +1,11 @@
+# Generated package and test scratch output
+/build/
+tests/e2e/*/.out/
+kcl.mod.lock
+_kcl_test_*.k
+
+# Python
+__pycache__/
+*.egg-info/
+.venv/
+uv.lock

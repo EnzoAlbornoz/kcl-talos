@@ -1,0 +1,17 @@
+[project]
+name = "talos-kcl"
+version = "0.1.0"
+description = "Generates a KCL package from the Talos Linux machine configuration JSON schema."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+talos-kcl = "talos_kcl.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/talos_kcl"]

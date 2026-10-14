@@ -1,0 +1,97 @@
+name: Release
+
+# Publishes one KCL package version per Talos release to ghcr.io/<owner>/talos.
+# The daily run only builds Talos releases that are not published yet.
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      versions:
+        description: "Comma separated Talos releases to build (default: every unpublished release)"
+        required: false
+      force:
+        description: Re-publish versions that already exist (e.g. after a generator fix)
+        type: boolean
+        default: false
+      include-prereleases:
+        description: Also publish alpha/beta releases
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  PACKAGE_NAME: talos
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      count: ${{ steps.plan.outputs.count }}
+      repository: ${{ steps.plan.outputs.repository }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.0
+      - id: plan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSIONS: ${{ inputs.versions }}
+          FORCE: ${{ inputs.force }}
+          PRERELEASES: ${{ inputs.include-prereleases }}
+        run: |
+          repository="${GITHUB_REPOSITORY_OWNER,,}/$PACKAGE_NAME"
+          args=(--registry "$REGISTRY" --repository "$repository" --registry-username "$GITHUB_ACTOR")
+          [ -n "$VERSIONS" ] && args+=(--versions "$VERSIONS")
+          [ "$FORCE" = "true" ] && args+=(--force)
+          [ "$PRERELEASES" = "true" ] && args+=(--include-prereleases)
+          matrix=$(uv run talos-kcl plan "${args[@]}")
+          echo "Releases to publish: $matrix"
+          {
+            echo "matrix=$matrix"
+            echo "count=$(jq length <<<"$matrix")"
+            echo "repository=$repository"
+          } >>"$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish ${{ matrix.version }}
+    needs: plan
+    if: needs.plan.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        include: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          talos-version: ${{ matrix.talos }}
+          package-name: ${{ env.PACKAGE_NAME }}
+      - name: Validate package
+        run: bash scripts/test-package.sh
+      - name: End-to-end with talosctl
+        run: bash scripts/e2e.sh
+      - name: Push oci://${{ env.REGISTRY }}/${{ needs.plan.outputs.repository }}:${{ matrix.version }}
+        env:
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          kcl registry login "$REGISTRY" -u "$GITHUB_ACTOR" -p "$REGISTRY_TOKEN"
+          flags=()
+          [ "$FORCE" = "true" ] && flags+=(--force)
+          cd build/talos
+          kcl mod push "${flags[@]}" "oci://$REGISTRY/${{ needs.plan.outputs.repository }}"
+      - name: Summary
+        run: |
+          echo "Published \`oci://$REGISTRY/${{ needs.plan.outputs.repository }}:${{ matrix.version }}\` for Talos ${{ matrix.talos }}" >>"$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,44 @@
+name: Setup
+description: Install uv, the KCL CLI and talosctl, then generate the KCL package for a Talos release.
+
+inputs:
+  talos-version:
+    description: Talos release tag to generate the package for (e.g. v1.14.2).
+    required: true
+  kcl-version:
+    description: KCL CLI release.
+    default: v0.13.1
+  package-name:
+    description: Name of the generated KCL package.
+    default: talos
+
+runs:
+  using: composite
+  steps:
+    - uses: astral-sh/setup-uv@v10.3.0
+      with:
+        enable-cache: true
+
+    - name: Install KCL ${{ inputs.kcl-version }}
+      shell: bash
+      run: |
+        dir="$RUNNER_TEMP/kcl"
+        mkdir -p "$dir"
+        curl -fsSL "https://github.com/kcl-lang/cli/releases/download/${{ inputs.kcl-version }}/kcl-${{ inputs.kcl-version }}-linux-amd64.tar.gz" \
+          | tar -xz -C "$dir" kcl
+        echo "$dir" >>"$GITHUB_PATH"
+        "$dir/kcl" version
+
+    - name: Install talosctl ${{ inputs.talos-version }}
+      shell: bash
+      run: |
+        dir="$RUNNER_TEMP/talosctl"
+        mkdir -p "$dir"
+        curl -fsSL -o "$dir/talosctl" "https://github.com/siderolabs/talos/releases/download/${{ inputs.talos-version }}/talosctl-linux-amd64"
+        chmod +x "$dir/talosctl"
+        echo "$dir" >>"$GITHUB_PATH"
+        "$dir/talosctl" version --client --short
+
+    - name: Generate package
+      shell: bash
+      run: uv run talos-kcl generate --talos-version "${{ inputs.talos-version }}" --package-name "${{ inputs.package-name }}" --out build/talos
