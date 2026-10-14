@@ -9,13 +9,15 @@ A scheduled GitHub Actions workflow watches Talos releases. For every release fr
 a KCL package version matching the Talos version:
 
 ```
-oci://ghcr.io/<owner>/talos:1.14.2   <- Talos v1.14.2
+oci://ghcr.io/enzoalbornoz/talos:1.14.2   <- Talos v1.14.2
 ```
+
+Forks publish to `ghcr.io/<owner>/talos`.
 
 ## Using the package
 
 ```bash
-kcl mod add oci://ghcr.io/<owner>/talos --tag 1.14.2
+kcl mod add oci://ghcr.io/enzoalbornoz/talos --tag 1.14.2
 ```
 
 ```python
@@ -120,8 +122,8 @@ Talos release ──► config.schema.json ──► talos-kcl generate ──�
   - `force`: re-publish existing versions, e.g. after a generator fix
   - `include-prereleases`: also publish alpha and beta releases
 
-  The first run backfills every release since v1.8.0. GHCR creates new packages as private.
-  To let others pull, make the `talos` package public once, under the package settings on GitHub.
+  The first run backfills every release since v1.8.0. The package takes the repository's
+  visibility, so a public repository gives an anonymously pullable package.
 
 Each package version must pass these checks before it's pushed:
 
