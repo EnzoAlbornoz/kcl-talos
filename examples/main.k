@@ -1,6 +1,6 @@
 # Per-node machine config patches for Talos 1.14, rendered as a multi-document YAML stream:
 #
-#   kcl run main.k -D node=cp-1 > cp-1.patch.yaml
+#   kcl run -q main.k -D node=cp-1 > cp-1.patch.yaml
 #   talosctl machineconfig patch controlplane.yaml --patch @cp-1.patch.yaml -o cp-1.yaml
 import manifests
 import talos

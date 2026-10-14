@@ -42,7 +42,7 @@ manifests.yaml_stream([
 ```
 
 ```bash
-kcl run main.k > patch.yaml
+kcl run -q main.k > patch.yaml   # -q: keep "downloading ..." notices out of the YAML
 talosctl machineconfig patch controlplane.yaml --patch @patch.yaml -o cp-1.yaml
 ```
 

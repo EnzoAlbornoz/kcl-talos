@@ -47,6 +47,6 @@ jobs:
           out=$(mktemp -d)
           talosctl gen config demo https://10.0.0.10:6443 --with-docs=false --with-examples=false -o "$out"
           for node in cp-1:controlplane worker-1:worker; do
-            kcl run main.k -D node="${node%%:*}" >"$out/patch.yaml"
+            kcl run -q main.k -D node="${node%%:*}" >"$out/patch.yaml"
             talosctl machineconfig patch "$out/${node##*:}.yaml" --patch "@$out/patch.yaml" -o /dev/null
           done
