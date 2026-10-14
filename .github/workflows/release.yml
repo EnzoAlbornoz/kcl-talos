@@ -1,11 +1,16 @@
 name: Release
 
 # Publishes one KCL package version per Talos release to ghcr.io/<owner>/talos.
-# The daily run only builds Talos releases that are not published yet.
+# Scheduled and push runs only build Talos releases that are not published yet.
 
 on:
   schedule:
     - cron: "17 5 * * *"
+  # Generator changes publish whatever is missing right away; already published versions
+  # are only rebuilt by a manual run with `force`.
+  push:
+    branches: [main]
+    paths: [src/**, scripts/**, tests/**, .github/actions/**, .github/workflows/release.yml]
   workflow_dispatch:
     inputs:
       versions:

@@ -113,7 +113,7 @@ Talos release ──► config.schema.json ──► talos-kcl generate ──�
 - **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs on every push and PR:
   generator unit tests, then the package checks for the oldest supported, an older, and the
   current Talos release.
-- **Release** ([.github/workflows/release.yml](.github/workflows/release.yml)) runs daily and on
+- **Release** ([.github/workflows/release.yml](.github/workflows/release.yml)) runs daily, on pushes to `main` that touch the generator, and on
   demand. It plans which Talos releases are unpublished, then generates, validates, and pushes
   each one to `ghcr.io/<owner>/talos`. Manual runs accept:
   - `versions`: build only specific releases
